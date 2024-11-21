@@ -3,6 +3,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faSpinner } from '@fortawesome/free-solid-svg-icons'
 
 interface Post {
   id: number
@@ -16,20 +18,26 @@ export default function Home() {
   const [posts, setPosts] = useState<Post[]>([])
   const [content, setContent] = useState('')
   const [name, setName] = useState('')
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const fetchPosts = async () => {
+      const response = await fetch('/api/posts')
+      const data = await response.json()
+      setPosts(data)
+      setLoading(false)
+    }
     fetchPosts()
   }, [])
 
-  const fetchPosts = async () => {
-    const response = await fetch('/api/posts')
-    const data = await response.json()
-    setPosts(data)
-  }
+
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
+    setName('');
+    setContent('');
+    setLoading(true);
     const response = await fetch('/api/posts', {
       method: 'POST',
       headers: {
@@ -37,41 +45,57 @@ export default function Home() {
       },
       body: JSON.stringify({ content, name }),
     })
-
-    if (response.ok) {
-      setContent('')
-      setName('')
-      fetchPosts()
-    }
+    const data = await response.json()
+    setPosts([data, ...posts])
+    setLoading(false);
   }
 
   return (
     <div>
-      <h1>掲示板</h1>
+      <h1 className='text-2xl font-bold text-gray-800'>掲示板</h1>
       <form onSubmit={handleSubmit}>
         <input
           type="text"
           placeholder="名前"
+          className='border border-gray-300 rounded p-1'
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
         <br />
         <textarea
           placeholder="投稿本文"
+          className='border border-gray-300 rounded p-1'
           value={content}
           onChange={(e) => setContent(e.target.value)}
           required
         />
         <br />
-        <button type="submit">投稿</button>
+        <button 
+          type="submit" 
+          className='bg-blue-500 text-white py-3 px-6 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500'
+        >
+            投稿
+        </button>
       </form>
-      <ul>
+      <div className="mt-4">
+        {loading ? (
+          <div className="text-gray-500 flex items-center">
+        <FontAwesomeIcon icon={faSpinner} className="mr-2 animate-spin" />
+        Loading...
+          </div>
+        ) : (
+          <ul className="space-y-4">
         {posts.map((post) => (
-          <li key={post.id}>
-            <strong>{post.name || 'ゲスト'}</strong> - {post.content} ({new Date(post.createdAt).toLocaleString()})
+          <li key={post.id} className="border-b border-gray-300 pb-2">
+            <div className="text-sm text-gray-600">
+          <strong className="text-gray-800">{post.name || 'ゲスト'}</strong> - {new Date(post.createdAt).toLocaleString()}
+            </div>
+            <p className="mt-1 text-gray-700">{post.content}</p>
           </li>
         ))}
-      </ul>
+          </ul>
+        )}
+      </div>
     </div>
   )
 }
